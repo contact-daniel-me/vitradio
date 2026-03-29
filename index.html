@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    
+    <title>VIT Community Radio – Studio Booking</title>
+    <meta name="description" content="Book studio slots at VIT Community Radio. Real-time availability, seamless scheduling for live, recorded, and special shows." />
+    <meta name="author" content="VIT Community Radio" />
+
+    <meta property="og:title" content="VIT Community Radio 90.8" />
+    <meta property="og:description" content="Official Studio Booking Platform for VIT Community Radio 90.8" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/favicon.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@vitradio" />
+    <meta name="twitter:image" content="/favicon.png" />
+  </head>
+
+    <style>
+      @keyframes pulse-logo {
+        0% { opacity: 0.7; transform: scale(0.95); }
+        50% { opacity: 1; transform: scale(1.05); }
+        100% { opacity: 0.7; transform: scale(0.95); }
+      }
+      .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+        background-color: #ffffff; /* Or transparent depending on the theme */
+      }
+      .loading-logo {
+        width: 150px;
+        height: auto;
+        animation: pulse-logo 2s infinite ease-in-out;
+      }
+    </style>
+    <div id="root">
+      <div class="loading-container">
+        <img src="/src/assets/VCR_logo.png" alt="Loading..." class="loading-logo" />
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
