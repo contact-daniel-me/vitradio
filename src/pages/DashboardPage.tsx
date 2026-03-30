@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, Clock, Radio, User, LogOut } from "lucide-react";
+import { Calendar, Clock, Radio, User, LogOut, CheckCircle, Circle, Edit2, Mic, Save } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import Navbar from "@/components/Navbar";
 import { getBookings, Booking, subscribeBookings } from "@/lib/bookingStore";
@@ -48,6 +48,15 @@ const DashboardPage = () => {
     localStorage.removeItem("vitcr_user_name");
     navigate("/login");
     toast.success("Successfully logged out");
+  };
+
+  const handleUpdateTracking = async (id: string, data: Partial<Booking>) => {
+    try {
+      await import("@/lib/bookingStore").then(m => m.updateBookingTracking(id, data));
+      toast.success("Tracking details updated!");
+    } catch (error) {
+      toast.error("Failed to update tracking details");
+    }
   };
 
   return (
@@ -142,7 +151,7 @@ const DashboardPage = () => {
                       transition={{ delay: 0.35 + i * 0.05 }}
                       className="bg-card rounded-2xl p-6 flex flex-col md:flex-row md:items-center gap-4 justify-between border border-border shadow-sm"
                     >
-                      <div className="flex-1 space-y-2">
+                      <div className="flex-1 space-y-3">
                         <div className="flex items-center gap-3">
                           <h3 className="font-display font-bold text-lg text-foreground">{booking.showTitle}</h3>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${statusStyles[booking.status]}`}>
@@ -162,6 +171,73 @@ const DashboardPage = () => {
                           <span>Section: {booking.section}</span>
                           <span>Type: {booking.type}</span>
                         </div>
+
+                        {booking.status === "approved" && booking.type === "Recorded" && (
+                          <div className="mt-4 p-4 bg-muted/30 rounded-xl border border-border/50 space-y-4">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                              <Mic className="w-3 h-3" /> Production Tracking
+                            </h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-3">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={booking.recordingCompleted}
+                                    onChange={(e) => handleUpdateTracking(booking.id, { recordingCompleted: e.target.checked })}
+                                    className="hidden"
+                                  />
+                                  <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${booking.recordingCompleted ? 'bg-primary border-primary text-white' : 'border-input bg-card'}`}>
+                                    {booking.recordingCompleted && <CheckCircle className="w-3 h-3" />}
+                                  </div>
+                                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Recording Completed</span>
+                                </label>
+
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={booking.editingCompleted}
+                                    onChange={(e) => handleUpdateTracking(booking.id, { editingCompleted: e.target.checked })}
+                                    className="hidden"
+                                  />
+                                  <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${booking.editingCompleted ? 'bg-primary border-primary text-white' : 'border-input bg-card'}`}>
+                                    {booking.editingCompleted && <CheckCircle className="w-3 h-3" />}
+                                  </div>
+                                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Editing Completed</span>
+                                </label>
+                              </div>
+
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Recorded By</span>
+                                  <div className="relative">
+                                    <Edit2 className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                    <input 
+                                      type="text"
+                                      placeholder="Name of recorder..."
+                                      defaultValue={booking.recordedBy}
+                                      onBlur={(e) => handleUpdateTracking(booking.id, { recordedBy: e.target.value })}
+                                      className="w-full bg-card border border-input rounded-lg pl-8 pr-3 py-1.5 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Airing Date</span>
+                                  <div className="relative">
+                                    <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                    <input 
+                                      type="date"
+                                      defaultValue={booking.airingDate}
+                                      onBlur={(e) => handleUpdateTracking(booking.id, { airingDate: e.target.value })}
+                                      className="w-full bg-card border border-input rounded-lg pl-8 pr-3 py-1.5 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   );

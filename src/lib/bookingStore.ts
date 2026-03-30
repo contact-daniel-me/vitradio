@@ -15,6 +15,10 @@ export interface Booking {
   approvedBy?: "Faculty" | "Section head" | "";
   createdAt: string;
   username?: string;
+  recordingCompleted?: boolean;
+  recordedBy?: string;
+  airingDate?: string;
+  editingCompleted?: boolean;
 }
 
 const TIME_SLOTS = [
@@ -46,6 +50,8 @@ const sampleBookings: Booking[] = [
     status: "approved",
     scriptApproved: true,
     createdAt: "2026-03-28T10:00:00Z",
+    recordingCompleted: false,
+    editingCompleted: false,
   },
 ];
 
@@ -88,6 +94,18 @@ export const updateBookingStatus = async (id: string, status: "approved" | "reje
   await supabase.from("bookings").update({ status }).eq("id", id);
 };
 
+export const updateBookingTracking = async (id: string, trackingData: { 
+  recordingCompleted?: boolean, 
+  recordedBy?: string, 
+  airingDate?: string, 
+  editingCompleted?: boolean 
+}) => {
+  // Optimistic UI updates
+  bookings = bookings.map((b) => (b.id === id ? { ...b, ...trackingData } : b));
+  notify();
+  await supabase.from("bookings").update(trackingData).eq("id", id);
+};
+
 export const deleteBooking = async (id: string) => {
   bookings = bookings.filter((b) => b.id !== id);
   notify();
@@ -114,6 +132,8 @@ export const addBooking = async (booking: Omit<Booking, "id" | "status" | "creat
     id: crypto.randomUUID(), // Can be superseded by supabase SERIAL id if using numeric
     status: "pending",
     createdAt: new Date().toISOString(),
+    recordingCompleted: false,
+    editingCompleted: false,
   };
   
   // Optimistic push
