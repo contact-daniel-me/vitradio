@@ -87,8 +87,10 @@ const SlotsPage = () => {
 
             {/* Time rows */}
             {TIME_SLOT_OPTIONS.map((time) => {
-              const hour = parseInt(time.split(":")[0]);
-              const label = hour < 12 ? `${hour} AM` : hour === 12 ? "12 PM" : `${hour - 12} PM`;
+              const [h, m] = time.split(":").map(Number);
+              const period = h < 12 ? "AM" : "PM";
+              const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+              const label = `${displayHour}:${m.toString().padStart(2, "0")} ${period}`;
 
               return (
                 <div key={time} className="grid grid-cols-[80px_repeat(5,1fr)] border-b border-border last:border-b-0">

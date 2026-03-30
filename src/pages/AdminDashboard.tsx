@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, ShieldAlert, LogOut, Clock, Calendar, Phone, Search, Download, Users } from "lucide-react";
+import { Check, X, ShieldAlert, LogOut, Clock, Calendar, Phone, Search, Download, Users, Upload, FileText } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import Navbar from "@/components/Navbar";
 import { getBookings, updateBookingStatus, deleteBooking, Booking, subscribeBookings } from "@/lib/bookingStore";
@@ -18,7 +18,8 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"bookings" | "users">("bookings");
+  const [activeTab, setActiveTab] = useState<"bookings" | "users" | "monthly">("bookings");
+  const [monthlyPDF, setMonthlyPDF] = useState<string | null>(null);
 
   useEffect(() => {
     if (localStorage.getItem("vitcr_admin_auth") !== "true") {
@@ -105,11 +106,34 @@ const AdminDashboard = () => {
     toast.success("Successfully exported current view to CSV!");
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("vitcr_admin_auth");
-    navigate("/");
-    toast.info("Logged out successfully");
+  const handlePDFUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === "application/pdf") {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setMonthlyPDF(base64);
+        localStorage.setItem("vitcr_monthly_plan", base64);
+        toast.success("Monthly plan uploaded successfully!");
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast.error("Please upload a PDF file only");
+    }
   };
+
+  const handleRemovePDF = () => {
+    setMonthlyPDF(null);
+    localStorage.removeItem("vitcr_monthly_plan");
+    toast.success("Monthly plan removed successfully!");
+  };
+
+  useEffect(() => {
+    const savedPDF = localStorage.getItem("vitcr_monthly_plan");
+    if (savedPDF) {
+      setMonthlyPDF(savedPDF);
+    }
+  }, []);
 
   return (
     <PageTransition>
@@ -135,7 +159,11 @@ const AdminDashboard = () => {
                 Manual CSV Export
               </button>
               <button
-                onClick={handleLogout}
+                onClick={() => {
+                  localStorage.removeItem("vitcr_admin_auth");
+                  navigate("/");
+                  toast.info("Logged out successfully");
+                }}
                 className="px-4 py-2 border border-border bg-card text-destructive rounded-lg flex items-center gap-2 hover:bg-destructive/10 transition-colors text-sm font-medium"
               >
                 <LogOut className="h-4 w-4" />
@@ -170,6 +198,12 @@ const AdminDashboard = () => {
                 className={`flex-1 md:w-32 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${activeTab === "users" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-foreground"}`}
               >
                 <Users className="w-4 h-4" /> Users
+              </button>
+              <button
+                onClick={() => setActiveTab("monthly")}
+                className={`flex-1 md:w-32 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${activeTab === "monthly" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-foreground"}`}
+              >
+                <FileText className="w-4 h-4" /> Monthly Plan
               </button>
             </div>
           </motion.div>
@@ -265,42 +299,43 @@ const AdminDashboard = () => {
                 );
               })
             ))}
-
             {activeTab === "users" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {userStats.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
-                  <div className="col-span-full bg-card rounded-2xl p-16 text-center shadow-sm border border-border">
-                    <p className="text-muted-foreground">No users found matching your search.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {userStats.length === 0 ? (
+                  <div className="bg-card rounded-2xl p-16 text-center shadow-sm border border-border col-span-full">
+                    <p className="text-muted-foreground">No users found.</p>
                   </div>
                 ) : (
-                  userStats.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).map((user, idx) => (
+                  userStats.map((user, idx) => (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.05 }}
                       key={user.username}
-                      className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col gap-4"
+                      className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4"
                     >
-                      <div className="flex items-center gap-3 border-b border-border pb-4">
-                        <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <Users className="h-5 w-5 text-primary" />
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                          {user.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <h3 className="font-display font-bold text-lg text-foreground">{user.username}</h3>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3"/> {user.contact}</span>
+                          <h3 className="font-bold text-foreground">{user.username}</h3>
+                          <p className="text-xs text-muted-foreground">{user.contact}</p>
                         </div>
                       </div>
+                      
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-muted rounded-xl p-3 text-center">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Total Bookings</p>
-                          <p className="text-2xl font-bold font-display text-foreground">{user.totalBookings}</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Total</p>
+                          <p className="text-xl font-bold text-foreground">{user.totalBookings}</p>
                         </div>
-                        <div className="bg-slot-available/10 rounded-xl p-3 text-center border-slot-available/20 border">
+                        <div className="bg-muted rounded-xl p-3 text-center">
                           <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Approved</p>
-                          <p className="text-2xl font-bold font-display text-slot-available">{user.approvedBookings}</p>
+                          <p className="text-xl font-bold text-foreground">{user.approvedBookings}</p>
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground/60 text-center pt-2">
+                      
+                      <div className="text-[10px] text-muted-foreground/60 text-center">
                         Last Active: {user.lastActive ? format(new Date(user.lastActive), "PPp") : "Unknown"}
                       </div>
                     </motion.div>
@@ -308,10 +343,80 @@ const AdminDashboard = () => {
                 )}
               </div>
             )}
+
+            {activeTab === "monthly" && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-card rounded-2xl p-8 border border-border shadow-sm"
+              >
+                <div className="text-center mb-6">
+                  <h2 className="font-display text-2xl font-bold text-foreground mb-2">Monthly Plan Management</h2>
+                  <p className="text-muted-foreground text-sm">Upload PDF files to display in Show Schedule section</p>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handlePDFUpload}
+                      className="hidden"
+                      id="pdf-upload"
+                    />
+                    <label
+                      htmlFor="pdf-upload"
+                      className="cursor-pointer flex flex-col items-center gap-3"
+                    >
+                      <Upload className="h-12 w-12 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-foreground">Click to upload monthly plan PDF</p>
+                        <p className="text-sm text-muted-foreground">PDF files only (Max 10MB)</p>
+                      </div>
+                    </label>
+                  </div>
+                  
+                  {monthlyPDF && (
+                    <div className="bg-muted/50 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-primary" />
+                          <span className="font-medium text-foreground">Current Monthly Plan</span>
+                        </div>
+                        <button
+                          onClick={handleRemovePDF}
+                          className="text-destructive hover:text-destructive/80 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="bg-card rounded-lg p-4 border border-border">
+                        <iframe
+                          src={monthlyPDF}
+                          className="w-full h-96 rounded-lg"
+                          title="Monthly Plan PDF"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Global Stats Summary */}
+                <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-border">
+                  <div className="bg-muted rounded-xl p-3 text-center">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Total System Bookings</p>
+                    <p className="text-2xl font-bold font-display text-foreground">{bookings.length}</p>
+                  </div>
+                  <div className="bg-muted rounded-xl p-3 text-center">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Approved Slots</p>
+                    <p className="text-2xl font-bold font-display text-foreground">{bookings.filter(b => b.status === "approved").length}</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </div>
         </div>
-
-
       </div>
     </PageTransition>
   );

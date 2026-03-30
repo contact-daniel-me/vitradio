@@ -17,15 +17,18 @@ const statusStyles = {
 const DashboardPage = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
   useEffect(() => {
     const user = localStorage.getItem("vitcr_user_auth");
+    const name = localStorage.getItem("vitcr_user_name");
     if (!user) {
       toast.error("Please login first");
       navigate("/login");
     } else {
       setUsername(user);
+      setUserName(name);
       const updateData = () => setBookings(getBookings().filter((b) => b.username === user).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || a.time.localeCompare(b.time)));
       updateData();
       return subscribeBookings(updateData);
@@ -42,6 +45,7 @@ const DashboardPage = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("vitcr_user_auth");
+    localStorage.removeItem("vitcr_user_name");
     navigate("/login");
     toast.success("Successfully logged out");
   };
@@ -62,7 +66,7 @@ const DashboardPage = () => {
               </div>
               <div>
                 <h1 className="font-display text-3xl font-bold text-foreground">
-                  Welcome back, <span className="gradient-text">{username}</span>!
+                  Welcome back, <span className="gradient-text">{userName || 'User'}</span>!
                 </h1>
                 <p className="text-muted-foreground text-sm">Here's your booking overview</p>
               </div>

@@ -2,10 +2,12 @@ import { supabase } from "./supabaseClient";
 
 export interface Booking {
   id: string;
+  name: string;
   section: string;
   contact: string;
   showTitle: string;
-  type: "Live" | "Recorded" | "Special Show";
+  studio: "Studio 1" | "Studio 2";
+  type?: "Live" | "Recorded" | "Special Show";
   date: string; // YYYY-MM-DD
   time: string; // HH:MM
   status: "pending" | "approved" | "rejected";
@@ -16,17 +18,29 @@ export interface Booking {
 }
 
 const TIME_SLOTS = [
-  "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
+  // Morning: 9:30 AM – 1:00 PM
+  "09:30",
+  "10:00", "10:30",
+  "11:00", "11:30",
+  "12:00", "12:30",
+  // Afternoon: 2:30 PM – 7:30 PM (1:00–2:30 PM is lunch break)
+  "14:30",
+  "15:00", "15:30",
+  "16:00", "16:30",
+  "17:00", "17:30",
+  "18:00", "18:30",
+  "19:00", "19:30",
 ];
 
 // Seed some sample bookings
 const sampleBookings: Booking[] = [
   {
     id: "1",
+    name: "Sample User",
     section: "Tamil",
     contact: "9876543210",
     showTitle: "Vanakkam Vellore",
-    type: "Live",
+    studio: "Studio 1",
     date: "2026-03-30",
     time: "09:00",
     status: "approved",
@@ -81,8 +95,19 @@ export const deleteBooking = async (id: string) => {
 };
 
 export const addBooking = async (booking: Omit<Booking, "id" | "status" | "createdAt">): Promise<Booking> => {
-  const existing = bookings.find((b) => b.date === booking.date && b.time === booking.time && b.status !== "rejected");
+  const existing = bookings.find((b) => b.date === booking.date && b.time === booking.time && b.studio === booking.studio && b.status !== "rejected");
   if (existing) throw new Error("Slot already booked");
+
+  // Check if user has already booked 2 slots on this date
+  const username = booking.username;
+  if (username) {
+    const userBookingsForDate = bookings.filter(
+      (b) => b.username === username && b.date === booking.date && b.status !== "rejected"
+    );
+    if (userBookingsForDate.length >= 2) {
+      throw new Error("Maximum 2 slots per day allowed");
+    }
+  }
 
   const newBooking: Booking = {
     ...booking,
@@ -102,8 +127,8 @@ export const addBooking = async (booking: Omit<Booking, "id" | "status" | "creat
   return newBooking;
 };
 
-export const getSlotStatus = (date: string, time: string): "available" | "booked" | "pending" => {
-  const booking = bookings.find((b) => b.date === date && b.time === time);
+export const getSlotStatus = (date: string, time: string, studio?: string): "available" | "booked" | "pending" => {
+  const booking = bookings.find((b) => b.date === date && b.time === time && (!studio || b.studio === studio));
   if (!booking) return "available";
   if (booking.status === "pending") return "pending";
   return "booked";
@@ -112,6 +137,7 @@ export const getSlotStatus = (date: string, time: string): "available" | "booked
 export const TIME_SLOT_OPTIONS = TIME_SLOTS;
 
 export const SECTIONS = ["Tamil", "English", "Malayalam", "Telugu", "Hindi", "Others"] as const;
+export const STUDIOS = ["Studio 1", "Studio 2"] as const;
 export const SHOW_TYPES = ["Live", "Recorded", "Special Show"] as const;
 
 export const isWeekday = (date: Date): boolean => {

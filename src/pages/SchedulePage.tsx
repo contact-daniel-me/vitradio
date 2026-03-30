@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import Navbar from "@/components/Navbar";
+import { FileText, Download } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const scheduleData = [
   { time: "09:00", shows: { mon: "Signature Tune & Radio Anthem", tue: "Signature Tune & Radio Anthem", wed: "Signature Tune & Radio Anthem", thu: "Signature Tune & Radio Anthem", fri: "Signature Tune & Radio Anthem" }, isCommon: true },
@@ -24,6 +26,23 @@ const scheduleData = [
 const days = ["mon", "tue", "wed", "thu", "fri"] as const;
 
 const SchedulePage = () => {
+  const [monthlyPDF, setMonthlyPDF] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedPDF = localStorage.getItem("vitcr_monthly_plan");
+    if (savedPDF) {
+      setMonthlyPDF(savedPDF);
+    }
+  }, []);
+
+  const handleDownloadPDF = () => {
+    if (monthlyPDF) {
+      const link = document.createElement("a");
+      link.href = monthlyPDF;
+      link.download = "VIT_Radio_Monthly_Plan.pdf";
+      link.click();
+    }
+  };
   return (
     <PageTransition>
       <Navbar />
@@ -39,13 +58,47 @@ const SchedulePage = () => {
             </h1>
           </motion.div>
 
-          {/* Desktop Table */}
+          {/* Monthly Plan Section */}
+          {monthlyPDF && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-10"
+            >
+              <div className="bg-card rounded-2xl p-6 border border-border shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-6 w-6 text-primary" />
+                    <h2 className="font-display text-xl font-bold text-foreground">Monthly Plan</h2>
+                  </div>
+                  <button
+                    onClick={handleDownloadPDF}
+                    className="px-4 py-2 border border-border bg-card rounded-lg flex items-center gap-2 hover:bg-muted text-foreground transition-colors text-sm font-medium"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download PDF
+                  </button>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-4">
+                  <iframe
+                    src={monthlyPDF}
+                    className="w-full h-96 rounded-lg border border-border"
+                    title="Monthly Plan PDF"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Weekly Schedule Section */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: monthlyPDF ? 0.3 : 0.2 }}
             className="hidden lg:block bg-card rounded-2xl overflow-hidden border border-border shadow-sm"
           >
+            <h2 className="font-display text-2xl font-bold text-foreground mb-6 text-center">Weekly Schedule</h2>
             <div className="grid grid-cols-[80px_repeat(5,1fr)] bg-primary/5 border-b border-border">
               <div className="p-4 text-center font-display font-bold text-foreground bg-primary/10">Hrs</div>
               {days.map((day) => (

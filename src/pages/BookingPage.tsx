@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Clock, ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday, isBefore } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday, isBefore, startOfDay } from "date-fns";
 import { toast } from "sonner";
 import PageTransition from "@/components/PageTransition";
 import Navbar from "@/components/Navbar";
@@ -11,7 +11,7 @@ import {
   isWeekday,
   TIME_SLOT_OPTIONS,
   SECTIONS,
-  SHOW_TYPES,
+  STUDIOS,
 } from "@/lib/bookingStore";
 
 const BookingPage = () => {
@@ -21,10 +21,11 @@ const BookingPage = () => {
   const [step, setStep] = useState<"date" | "form">("date");
 
   const [formData, setFormData] = useState({
+    name: "",
     section: "",
     contact: "",
     showTitle: "",
-    type: "" as "" | "Live" | "Recorded" | "Special Show",
+    studio: "Studio 1" as "Studio 1" | "Studio 2",
     scriptApproved: false,
     approvedBy: "" as "Faculty" | "Section head" | "",
   });
@@ -38,7 +39,7 @@ const BookingPage = () => {
 
   const handleSubmit = () => {
     if (!selectedDate || !selectedTime) return;
-    if (!formData.section || !formData.contact || !formData.showTitle || !formData.type) {
+    if (!formData.name || !formData.section || !formData.showTitle) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -54,10 +55,11 @@ const BookingPage = () => {
 
     try {
       addBooking({
+        name: formData.name,
         section: formData.section,
         contact: formData.contact,
         showTitle: formData.showTitle,
-        type: formData.type as "Live" | "Recorded" | "Special Show",
+        studio: formData.studio,
         date: dateStr,
         time: selectedTime,
         scriptApproved: formData.scriptApproved,
@@ -68,7 +70,7 @@ const BookingPage = () => {
       setStep("date");
       setSelectedDate(null);
       setSelectedTime(null);
-      setFormData({ section: "", contact: "", showTitle: "", type: "", scriptApproved: false, approvedBy: "" });
+      setFormData({ name: "", section: "", contact: "", showTitle: "", studio: "Studio 1", scriptApproved: false, approvedBy: "" });
     } catch {
       toast.error("This slot is already booked!");
     }
@@ -139,7 +141,7 @@ const BookingPage = () => {
                     ))}
                     {days.map((day) => {
                       const weekday = isWeekday(day);
-                      const past = isBefore(day, new Date()) && !isToday(day);
+                      const past = isBefore(day, startOfDay(new Date())) && !isToday(day);
                       const selected = selectedDate && isSameDay(day, selectedDate);
                       const disabled = !weekday || past;
 
@@ -169,27 +171,48 @@ const BookingPage = () => {
                   </div>
 
                   <p className="text-xs text-muted-foreground mt-4 text-center">
-                    Weekdays only (Mon – Fri) • 9:00 AM – 6:00 PM
+                    Weekdays only (Mon – Fri) • 9:00 AM – 7:30 PM
                   </p>
                 </div>
 
                 {/* Time slots */}
                 <div className="bg-card rounded-2xl p-6 border border-border shadow-sm">
-                  <div className="flex items-center gap-2 mb-6">
-                    <Clock className="h-5 w-5 text-primary" />
-                    <h3 className="font-display text-lg font-semibold text-foreground">
-                      {selectedDate ? format(selectedDate, "EEEE, MMM d") : "Select a date first"}
-                    </h3>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" />
+                      <h3 className="font-display text-lg font-semibold text-foreground">
+                        {selectedDate ? format(selectedDate, "EEEE, MMM d") : "Select a date first"}
+                      </h3>
+                    </div>
+                    {selectedDate && (
+                      <select
+                        value={formData.studio}
+                        onChange={(e) => setFormData({ ...formData, studio: e.target.value as "Studio 1" | "Studio 2" })}
+                        className="rounded-xl bg-background border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40"
+                      >
+                        {STUDIOS.map((studio) => (
+                          <option key={studio} value={studio}>{studio}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   {selectedDate ? (
                     <div className="space-y-3">
                       {TIME_SLOT_OPTIONS.map((time) => {
-                        const status = getSlotStatus(dateStr, time);
+                        const status = getSlotStatus(dateStr, time, formData.studio);
                         const isSelected = selectedTime === time;
-                        const disabled = status === "booked";
-                        const hour = parseInt(time.split(":")[0]);
-                        const label = hour < 12 ? `${hour}:00 AM` : hour === 12 ? "12:00 PM" : `${hour - 12}:00 PM`;
+                        const [h, m] = time.split(":").map(Number);
+                        const period = h < 12 ? "AM" : "PM";
+                        const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                        const label = `${displayHour}:${m.toString().padStart(2, "0")} ${period}`;
+
+                        // Disable past time slots on today's date (compare total minutes)
+                        const now = new Date();
+                        const slotMinutes = h * 60 + m;
+                        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                        const isSlotPast = isToday(selectedDate!) && nowMinutes >= slotMinutes;
+                        const disabled = status === "booked" || isSlotPast;
 
                         return (
                           <motion.button
@@ -207,7 +230,13 @@ const BookingPage = () => {
                           >
                             <span className="font-medium text-foreground">{label}</span>
                             <span className="text-xs uppercase font-semibold tracking-wider">
-                              {status === "booked" ? "Booked" : status === "pending" ? "Pending" : "Available"}
+                              {isSlotPast && status !== "booked" && status !== "pending"
+                                ? "Past"
+                                : status === "booked"
+                                ? "Booked"
+                                : status === "pending"
+                                ? "Pending"
+                                : "Available"}
                             </span>
                           </motion.button>
                         );
@@ -259,27 +288,45 @@ const BookingPage = () => {
                     <Calendar className="h-5 w-5 text-primary" />
                     <span className="font-medium text-foreground">
                       {selectedDate && format(selectedDate, "EEEE, MMMM d, yyyy")} at{" "}
-                      {selectedTime && `${parseInt(selectedTime.split(":")[0]) > 12 ? parseInt(selectedTime.split(":")[0]) - 12 : parseInt(selectedTime.split(":")[0])}:00 ${parseInt(selectedTime.split(":")[0]) >= 12 ? "PM" : "AM"}`}
+                      {selectedTime && (() => {
+                        const [h, m] = selectedTime.split(":").map(Number);
+                        const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                        const period = h < 12 ? "AM" : "PM";
+                        return `${displayHour}:${m.toString().padStart(2, "0")} ${period}`;
+                      })()} • {formData.studio}
                     </span>
                   </div>
 
                   <div className="space-y-5">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-foreground">Studio *</label>
+                      <select
+                        value={formData.studio}
+                        onChange={(e) => setFormData({ ...formData, studio: e.target.value as "Studio 1" | "Studio 2" })}
+                        className={inputClasses}
+                      >
+                        {STUDIOS.map((studio) => (
+                          <option key={studio} value={studio}>{studio}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-foreground">Name *</label>
+                        <input
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          placeholder="e.g. Arun Kumar"
+                          className={inputClasses}
+                        />
+                      </div>
                       <div>
                         <label className="block text-sm font-medium mb-2 text-foreground">Show Title *</label>
                         <input
                           value={formData.showTitle}
                           onChange={(e) => setFormData({ ...formData, showTitle: e.target.value })}
                           placeholder="e.g. Vanakkam Vellore"
-                          className={inputClasses}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-foreground">Contact Number *</label>
-                        <input
-                          value={formData.contact}
-                          onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                          placeholder="e.g. 9876543210"
                           className={inputClasses}
                         />
                       </div>
@@ -300,17 +347,13 @@ const BookingPage = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-2 text-foreground">Show Type *</label>
-                        <select
-                          value={formData.type}
-                          onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                        <label className="block text-sm font-medium mb-2 text-foreground">Contact Number <span className="text-muted-foreground font-normal">(Optional)</span></label>
+                        <input
+                          value={formData.contact}
+                          onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+                          placeholder="e.g. 9876543210"
                           className={inputClasses}
-                        >
-                          <option value="">Select type</option>
-                          {SHOW_TYPES.map((t) => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
-                        </select>
+                        />
                       </div>
                     </div>
 
