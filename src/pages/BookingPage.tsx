@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Clock, ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday, isBefore, startOfDay } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday, isBefore, startOfDay, addHours } from "date-fns";
 import { toast } from "sonner";
 import PageTransition from "@/components/PageTransition";
 import Navbar from "@/components/Navbar";
@@ -71,8 +71,8 @@ const BookingPage = () => {
       setSelectedDate(null);
       setSelectedTime(null);
       setFormData({ name: "", section: "", contact: "", showTitle: "", studio: "Studio 1", scriptApproved: false, approvedBy: "" });
-    } catch {
-      toast.error("This slot is already booked!");
+    } catch (error: any) {
+      toast.error(error.message || "This slot is already booked!");
     }
   };
 
@@ -141,9 +141,10 @@ const BookingPage = () => {
                     ))}
                     {days.map((day) => {
                       const weekday = isWeekday(day);
-                      const past = isBefore(day, startOfDay(new Date())) && !isToday(day);
+                      // Disable past dates and today (must book 24h in advance)
+                      const isPastOrToday = isBefore(day, startOfDay(new Date())) || isToday(day);
                       const selected = selectedDate && isSameDay(day, selectedDate);
-                      const disabled = !weekday || past;
+                      const disabled = !weekday || isPastOrToday;
 
                       return (
                         <motion.button
@@ -207,12 +208,12 @@ const BookingPage = () => {
                         const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
                         const label = `${displayHour}:${m.toString().padStart(2, "0")} ${period}`;
 
-                        // Disable past time slots on today's date (compare total minutes)
+                        // Enforce 24-hour advance booking rule
                         const now = new Date();
-                        const slotMinutes = h * 60 + m;
-                        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-                        const isSlotPast = isToday(selectedDate!) && nowMinutes >= slotMinutes;
-                        const disabled = status === "booked" || isSlotPast;
+                        const slotDateTime = new Date(selectedDate!);
+                        slotDateTime.setHours(h, m, 0, 0);
+                        const isTooSoon = isBefore(slotDateTime, addHours(now, 24));
+                        const disabled = status === "booked" || isTooSoon;
 
                         return (
                           <motion.button
@@ -230,8 +231,8 @@ const BookingPage = () => {
                           >
                             <span className="font-medium text-foreground">{label}</span>
                             <span className="text-xs uppercase font-semibold tracking-wider">
-                              {isSlotPast && status !== "booked" && status !== "pending"
-                                ? "Past"
+                              {isTooSoon && status !== "booked" && status !== "pending"
+                                ? "Too Soon"
                                 : status === "booked"
                                 ? "Booked"
                                 : status === "pending"

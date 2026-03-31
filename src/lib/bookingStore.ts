@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { addHours, isBefore } from "date-fns";
 
 export interface Booking {
   id: string;
@@ -126,6 +127,16 @@ export const addBooking = async (booking: Omit<Booking, "id" | "status" | "creat
     if (userBookingsForDate.length >= 2) {
       throw new Error("Maximum 2 slots per day allowed");
     }
+  }
+
+  // Enforce 24-hour advance booking rule
+  const now = new Date();
+  const [h, m] = booking.time.split(":").map(Number);
+  const slotDateTime = new Date(booking.date);
+  slotDateTime.setHours(h, m, 0, 0);
+  
+  if (isBefore(slotDateTime, addHours(now, 24))) {
+    throw new Error("Slots must be booked at least 24 hours in advance");
   }
 
   const newBooking: Booking = {
