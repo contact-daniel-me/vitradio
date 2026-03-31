@@ -19,6 +19,7 @@ export interface Booking {
   recordedBy?: string;
   airingDate?: string;
   editingCompleted?: boolean;
+  notRecordedReason?: string;
 }
 
 const TIME_SLOTS = [

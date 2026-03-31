@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, Clock, Radio, User, LogOut, CheckCircle, Circle, Edit2, Mic, Save } from "lucide-react";
+import { Calendar, Clock, Radio, User, LogOut, CheckCircle, Circle, Edit2, Mic, Save, AlertCircle } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import Navbar from "@/components/Navbar";
 import { getBookings, Booking, subscribeBookings } from "@/lib/bookingStore";
@@ -169,73 +169,98 @@ const DashboardPage = () => {
                             {timeLabel}
                           </span>
                           <span>Section: {booking.section}</span>
-                          <span>Type: {booking.type}</span>
                         </div>
 
                         {booking.status === "approved" && booking.type === "Recorded" && (
                           <div className="mt-4 p-4 bg-muted/30 rounded-xl border border-border/50 space-y-4">
-                            <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                              <Mic className="w-3 h-3" /> Production Tracking
-                            </h4>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-3">
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                  <input 
-                                    type="checkbox" 
-                                    checked={booking.recordingCompleted}
-                                    onChange={(e) => handleUpdateTracking(booking.id, { recordingCompleted: e.target.checked })}
-                                    className="hidden"
-                                  />
-                                  <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${booking.recordingCompleted ? 'bg-primary border-primary text-white' : 'border-input bg-card'}`}>
-                                    {booking.recordingCompleted && <CheckCircle className="w-3 h-3" />}
-                                  </div>
-                                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Recording Completed</span>
-                                </label>
-
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                  <input 
-                                    type="checkbox" 
-                                    checked={booking.editingCompleted}
-                                    onChange={(e) => handleUpdateTracking(booking.id, { editingCompleted: e.target.checked })}
-                                    className="hidden"
-                                  />
-                                  <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${booking.editingCompleted ? 'bg-primary border-primary text-white' : 'border-input bg-card'}`}>
-                                    {booking.editingCompleted && <CheckCircle className="w-3 h-3" />}
-                                  </div>
-                                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Editing Completed</span>
-                                </label>
-                              </div>
-
-                              <div className="space-y-3">
-                                <div className="space-y-1">
-                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Recorded By</span>
-                                  <div className="relative">
-                                    <Edit2 className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                                    <input 
-                                      type="text"
-                                      placeholder="Name of recorder..."
-                                      defaultValue={booking.recordedBy}
-                                      onBlur={(e) => handleUpdateTracking(booking.id, { recordedBy: e.target.value })}
-                                      className="w-full bg-card border border-input rounded-lg pl-8 pr-3 py-1.5 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
-                                    />
-                                  </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Airing Date</span>
-                                  <div className="relative">
-                                    <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                                    <input 
-                                      type="date"
-                                      defaultValue={booking.airingDate}
-                                      onBlur={(e) => handleUpdateTracking(booking.id, { airingDate: e.target.value })}
-                                      className="w-full bg-card border border-input rounded-lg pl-8 pr-3 py-1.5 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
-                                    />
-                                  </div>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                <Mic className="w-3 h-3" /> Production Tracking
+                              </h4>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground mr-1">Was this recorded?</span>
+                                <div className="flex bg-muted p-1 rounded-lg border border-border">
+                                  <button 
+                                    onClick={() => handleUpdateTracking(booking.id, { recordingCompleted: true })}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${booking.recordingCompleted ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted-foreground/10'}`}
+                                  >Yes</button>
+                                  <button 
+                                    onClick={() => handleUpdateTracking(booking.id, { recordingCompleted: false })}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${!booking.recordingCompleted ? 'bg-destructive text-destructive-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted-foreground/10'}`}
+                                  >No</button>
                                 </div>
                               </div>
                             </div>
+                            
+                            {booking.recordingCompleted ? (
+                              <motion.div 
+                                initial={{ opacity: 0, height: 0 }} 
+                                animate={{ opacity: 1, height: 'auto' }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border/30"
+                              >
+                                <div className="space-y-3">
+                                  <label className="flex items-center gap-3 cursor-pointer group">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={booking.editingCompleted}
+                                      onChange={(e) => handleUpdateTracking(booking.id, { editingCompleted: e.target.checked })}
+                                      className="hidden"
+                                    />
+                                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${booking.editingCompleted ? 'bg-primary border-primary text-white' : 'border-input bg-card'}`}>
+                                      {booking.editingCompleted && <CheckCircle className="w-3 h-3" />}
+                                    </div>
+                                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Editing Completed</span>
+                                  </label>
+
+                                  <div className="space-y-1">
+                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">Recorded By</span>
+                                    <div className="relative">
+                                      <Edit2 className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                      <input 
+                                        type="text"
+                                        placeholder="Name of recorder..."
+                                        defaultValue={booking.recordedBy}
+                                        onBlur={(e) => handleUpdateTracking(booking.id, { recordedBy: e.target.value })}
+                                        className="w-full bg-card border border-input rounded-lg pl-8 pr-3 py-1.5 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                  <div className="space-y-1">
+                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">Airing Date (Optional)</span>
+                                    <div className="relative">
+                                      <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                      <input 
+                                        type="date"
+                                        defaultValue={booking.airingDate}
+                                        onBlur={(e) => handleUpdateTracking(booking.id, { airingDate: e.target.value })}
+                                        className="w-full bg-card border border-input rounded-lg pl-8 pr-3 py-1.5 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ) : (
+                              <motion.div 
+                                initial={{ opacity: 0, height: 0 }} 
+                                animate={{ opacity: 1, height: 'auto' }}
+                                className="pt-2 border-t border-border/30"
+                              >
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-[10px] font-semibold text-muted-foreground uppercase">
+                                    <AlertCircle className="w-3 h-3" /> Reason for not recording (Optional)
+                                  </div>
+                                  <textarea 
+                                    placeholder="Explain why this slot wasn't recorded..."
+                                    defaultValue={booking.notRecordedReason}
+                                    onBlur={(e) => handleUpdateTracking(booking.id, { notRecordedReason: e.target.value })}
+                                    className="w-full h-20 bg-card border border-input rounded-lg p-3 text-xs focus:ring-1 focus:ring-primary outline-none transition-all resize-none"
+                                  />
+                                </div>
+                              </motion.div>
+                            )}
                           </div>
                         )}
                       </div>

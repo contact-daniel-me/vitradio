@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, ShieldAlert, LogOut, Clock, Calendar, Phone, Search, Download, Users, Upload, FileText } from "lucide-react";
+import { Check, X, ShieldAlert, LogOut, Clock, Calendar, Phone, Search, Download, Users, User, Upload, FileText, Mic, Scissors, Circle, AlertCircle } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import Navbar from "@/components/Navbar";
-import { getBookings, updateBookingStatus, deleteBooking, Booking, subscribeBookings } from "@/lib/bookingStore";
+import { getBookings, updateBookingStatus, updateBookingTracking, deleteBooking, Booking, subscribeBookings } from "@/lib/bookingStore";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -26,7 +26,7 @@ const AdminDashboard = () => {
       navigate("/admin/login");
     } else {
       setBookings(getBookings().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      
+
       const unsub = subscribeBookings(() => {
         setBookings(getBookings().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       });
@@ -40,7 +40,7 @@ const AdminDashboard = () => {
     const updatedBookings = getBookings().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setBookings(updatedBookings);
     toast.success(`Booking ${newStatus} successfully!`);
-    
+
   };
 
   const handleDelete = (id: string) => {
@@ -48,6 +48,15 @@ const AdminDashboard = () => {
       deleteBooking(id);
       setBookings(getBookings().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       toast.info("Booking deleted");
+    }
+  };
+
+  const handleUpdateTracking = async (id: string, data: Partial<Booking>) => {
+    try {
+      await updateBookingTracking(id, data);
+      toast.success("Tracking status updated");
+    } catch (error) {
+      toast.error("Failed to update tracking");
     }
   };
 
@@ -67,6 +76,7 @@ const AdminDashboard = () => {
     const approved = userBookings.filter(b => b.status === "approved").length;
     return {
       username,
+      name: userBookings[0]?.name || "Anonymous",
       contact: userBookings[0]?.contact || "N/A",
       totalBookings: userBookings.length,
       approvedBookings: approved,
@@ -185,7 +195,7 @@ const AdminDashboard = () => {
                 className="w-full rounded-xl border border-input bg-card pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all shadow-sm"
               />
             </div>
-            
+
             <div className="flex bg-card border border-border rounded-xl p-1 w-full md:w-auto mt-4 md:mt-0 shadow-sm overflow-hidden">
               <button
                 onClick={() => setActiveTab("bookings")}
@@ -211,94 +221,152 @@ const AdminDashboard = () => {
           <div className="space-y-4">
             {activeTab === "bookings" && (
               filteredBookings.length === 0 ? (
-              <div className="bg-card rounded-2xl p-16 text-center shadow-sm border border-border">
-                <p className="text-muted-foreground">No bookings found securely matching your search criteria.</p>
-              </div>
-            ) : (
-              filteredBookings.map((booking, idx) => {
-                const hour = parseInt(booking.time.split(":")[0]);
-                const timeStr = hour < 12 ? `${hour}:00 AM` : hour === 12 ? "12:00 PM" : `${hour - 12}:00 PM`;
+                <div className="bg-card rounded-2xl p-16 text-center shadow-sm border border-border">
+                  <p className="text-muted-foreground">No bookings found securely matching your search criteria.</p>
+                </div>
+              ) : (
+                filteredBookings.map((booking, idx) => {
+                  const hour = parseInt(booking.time.split(":")[0]);
+                  const timeStr = hour < 12 ? `${hour}:00 AM` : hour === 12 ? "12:00 PM" : `${hour - 12}:00 PM`;
 
-                return (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    key={booking.id}
-                    className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6"
-                  >
-                    <div className="space-y-3 flex-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-display text-xl font-bold text-foreground">{booking.showTitle}</h3>
-                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border ${statusStyles[booking.status]}`}>
-                          {booking.status}
-                        </span>
-                        <span className="bg-muted px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          User: {booking.username || "Anonymous"}
-                        </span>
-                      </div>
-                      
-                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-foreground/80">
-                        <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
-                          <Calendar className="h-4 w-4 text-primary" />
-                          {format(new Date(booking.date), "MMM dd, yyyy")}
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      key={booking.id}
+                      className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6"
+                    >
+                      <div className="space-y-3 flex-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-display text-xl font-bold text-foreground">{booking.showTitle}</h3>
+                          <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border ${statusStyles[booking.status]}`}>
+                            {booking.status}
+                          </span>
+                          <span className="bg-muted px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                            <User className="w-3 h-3" /> {booking.name || "Anonymous"} ({booking.username || "Anonymous"})
+                          </span>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
-                          <Clock className="h-4 w-4 text-primary" />
-                          {timeStr}
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
-                          <Phone className="h-4 w-4 text-primary" />
-                          {booking.contact}
-                        </div>
-                      </div>
 
-                      <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <span>Section: {booking.section}</span> • 
-                        <span>Type: {booking.type}</span> • 
-                        <span className={booking.scriptApproved ? "text-slot-available" : "text-slot-booked"}>
-                          Script: {booking.scriptApproved ? "Approved" : "Pending"}
-                        </span>
-                        {booking.approvedBy && (
-                          <span> • Approved By: <strong className="text-foreground">{booking.approvedBy}</strong></span>
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-foreground/80">
+                          <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
+                            <Calendar className="h-4 w-4 text-primary" />
+                            {format(new Date(booking.date), "MMM dd, yyyy")}
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
+                            <Clock className="h-4 w-4 text-primary" />
+                            {timeStr}
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
+                            <Phone className="h-4 w-4 text-primary" />
+                            {booking.contact}
+                          </div>
+                        </div>
+
+                        <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <span>Section: {booking.section}</span> •
+                          <span className={booking.scriptApproved ? "text-slot-available" : "text-slot-booked"}>
+                            Script: {booking.scriptApproved ? "Approved" : "Pending"}
+                          </span>
+                          {booking.approvedBy && (
+                            <span> • Approved By: <strong className="text-foreground">{booking.approvedBy}</strong></span>
+                          )}
+                        </div>
+
+                        <div className="text-xs text-muted-foreground/60 mb-3">
+                          Requested on: {format(new Date(booking.createdAt), "PPp")}
+                        </div>
+
+                        {booking.type === "Recorded" && booking.status === "approved" && (
+                          <div className="mt-4 p-4 bg-muted/30 rounded-xl border border-border/50 space-y-4">
+                            {!booking.recordingCompleted && booking.notRecordedReason ? (
+                              <div className="bg-destructive/5 text-destructive border border-destructive/20 rounded-lg p-3 flex items-start gap-3 animate-pulse-subtle">
+                                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-extrabold tracking-tight opacity-70">Not Recorded Reason</span>
+                                  <p className="text-sm italic font-medium">"{booking.notRecordedReason}"</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex flex-wrap items-center gap-6">
+                                  <div className="flex items-center gap-2">
+                                    <Mic className={`h-4 w-4 ${booking.recordingCompleted ? 'text-green-500' : 'text-muted-foreground'}`} />
+                                    <div className="flex flex-col">
+                                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Recording</span>
+                                      <span className="text-xs font-semibold">{booking.recordingCompleted ? "Completed" : "Pending"}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <Circle className="h-4 w-4 text-muted-foreground" />
+                                    <div className="flex flex-col">
+                                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">By</span>
+                                      <span className="text-xs font-semibold whitespace-nowrap">{booking.recordedBy || "N/A"}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <Scissors className={`h-4 w-4 ${booking.editingCompleted ? 'text-green-500' : 'text-muted-foreground'}`} />
+                                    <div className="flex flex-col">
+                                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Editing</span>
+                                      <span className="text-xs font-semibold">{booking.editingCompleted ? "Finished" : "In Progress"}</span>
+                                    </div>
+                                  </div>
+
+                                  {booking.airingDate && (
+                                    <div className="flex items-center gap-2 bg-primary/5 px-2 py-1 rounded-md border border-primary/10">
+                                      <Calendar className="h-3.5 w-3.5 text-primary" />
+                                      <div className="flex flex-col">
+                                        <span className="text-[8px] uppercase font-bold text-primary tracking-tighter leading-none mb-0.5">Airing On</span>
+                                        <span className="text-[11px] font-bold text-primary leading-none">{format(new Date(booking.airingDate), "MMM dd, yyyy")}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <button
+                                  onClick={() => handleUpdateTracking(booking.id, { editingCompleted: !booking.editingCompleted })}
+                                  className={`min-w-32 px-4 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${booking.editingCompleted ? 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200' : 'bg-primary text-primary-foreground border-primary hover:opacity-90'}`}
+                                >
+                                  {booking.editingCompleted ? 'Mark Editing Pending' : 'Mark Editing Finished'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
-                      
-                      <div className="text-xs text-muted-foreground/60">
-                        Requested on: {format(new Date(booking.createdAt), "PPp")}
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 md:w-32 md:flex-col shrink-0">
-                      {booking.status !== "approved" && (
-                        <button
-                          onClick={() => handleStatusChange(booking.id, "approved")}
-                          className="flex-1 w-full bg-slot-available/10 text-slot-available border border-slot-available/20 hover:bg-slot-available hover:text-white px-3 py-2 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm font-semibold"
-                        >
-                          <Check className="h-4 w-4" /> Approve
-                        </button>
-                      )}
-                      {booking.status !== "rejected" && (
-                        <button
-                          onClick={() => handleStatusChange(booking.id, "rejected")}
-                          className="flex-1 w-full bg-slot-booked/10 text-slot-booked border border-slot-booked/20 hover:bg-slot-booked hover:text-white px-3 py-2 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm font-semibold"
-                        >
-                          <X className="h-4 w-4" /> Reject
-                        </button>
-                      )}
-                      {booking.status === "rejected" && (
-                        <button
-                          onClick={() => handleDelete(booking.id)}
-                          className="flex-1 w-full text-xs text-muted-foreground hover:text-destructive underline mt-2"
-                        >
-                          Delete purely
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })
-            ))}
+                      <div className="flex items-center gap-2 md:w-32 md:flex-col shrink-0">
+                        {booking.status !== "approved" && (
+                          <button
+                            onClick={() => handleStatusChange(booking.id, "approved")}
+                            className="flex-1 w-full bg-slot-available/10 text-slot-available border border-slot-available/20 hover:bg-slot-available hover:text-white px-3 py-2 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm font-semibold"
+                          >
+                            <Check className="h-4 w-4" /> Approve
+                          </button>
+                        )}
+                        {booking.status !== "rejected" && (
+                          <button
+                            onClick={() => handleStatusChange(booking.id, "rejected")}
+                            className="flex-1 w-full bg-slot-booked/10 text-slot-booked border border-slot-booked/20 hover:bg-slot-booked hover:text-white px-3 py-2 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm font-semibold"
+                          >
+                            <X className="h-4 w-4" /> Reject
+                          </button>
+                        )}
+                        {booking.status === "rejected" && (
+                          <button
+                            onClick={() => handleDelete(booking.id)}
+                            className="flex-1 w-full text-xs text-muted-foreground hover:text-destructive underline mt-2"
+                          >
+                            Delete purely
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })
+              ))}
             {activeTab === "users" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {userStats.length === 0 ? (
@@ -319,11 +387,12 @@ const AdminDashboard = () => {
                           {user.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <h3 className="font-bold text-foreground">{user.username}</h3>
+                          <h3 className="font-bold text-foreground text-lg">{user.name}</h3>
+                          <p className="text-xs text-muted-foreground font-medium uppercase tracking-tight">{user.username}</p>
                           <p className="text-xs text-muted-foreground">{user.contact}</p>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-muted rounded-xl p-3 text-center">
                           <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Total</p>
@@ -334,7 +403,7 @@ const AdminDashboard = () => {
                           <p className="text-xl font-bold text-foreground">{user.approvedBookings}</p>
                         </div>
                       </div>
-                      
+
                       <div className="text-[10px] text-muted-foreground/60 text-center">
                         Last Active: {user.lastActive ? format(new Date(user.lastActive), "PPp") : "Unknown"}
                       </div>
@@ -355,7 +424,7 @@ const AdminDashboard = () => {
                   <h2 className="font-display text-2xl font-bold text-foreground mb-2">Monthly Plan Management</h2>
                   <p className="text-muted-foreground text-sm">Upload PDF files to display in Show Schedule section</p>
                 </div>
-                
+
                 <div className="space-y-6">
                   <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
                     <input
@@ -376,7 +445,7 @@ const AdminDashboard = () => {
                       </div>
                     </label>
                   </div>
-                  
+
                   {monthlyPDF && (
                     <div className="bg-muted/50 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -401,7 +470,7 @@ const AdminDashboard = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Global Stats Summary */}
                 <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-border">
                   <div className="bg-muted rounded-xl p-3 text-center">
