@@ -99,9 +99,18 @@ const BookingPage = () => {
             <h1 className="font-display text-4xl md:text-5xl font-bold mb-3 text-foreground">
               Book a <span className="gradient-text">Studio Slot</span>
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-lg mb-6">
               Select a date and time, then fill in your show details
             </p>
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive border border-destructive/20 rounded-xl text-sm font-semibold mb-6 shadow-sm"
+            >
+              <Clock className="w-4 h-4 animate-pulse-subtle" />
+              Note: Slots must be booked at least 24 hours in advance.
+            </motion.div>
           </motion.div>
 
           <AnimatePresence mode="wait">
